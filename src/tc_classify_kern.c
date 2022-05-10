@@ -100,7 +100,6 @@ struct bpf_elf_map SEC("maps") map_ifindex_type = {
 
  */
 
-#define DEBUG 1
 #ifdef  DEBUG
 /* Only use this for debug output. Notice output from bpf_trace_printk()
  * end-up in /sys/kernel/debug/tracing/trace_pipe
@@ -111,8 +110,6 @@ struct bpf_elf_map SEC("maps") map_ifindex_type = {
                         bpf_trace_printk(____fmt, sizeof(____fmt),      \
                                      ##__VA_ARGS__);                    \
                 })
-#else
-#define bpf_debug(fmt, ...) { } while (0)
 #endif
 
 /* Wrap the macros from <linux/pkt_sched.h> */
@@ -296,8 +293,10 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	if (txq_cfg->queue_mapping != 0) {
 		skb->queue_mapping = txq_cfg->queue_mapping;
 	} else {
+		#ifdef DEBUG
 		bpf_debug("Misconf: CPU:%u no conf (curr qm:%d)\n",
 			  cpu, skb->queue_mapping);
+		#endif
 	}
 
 	/* Localhost generated traffic, goes into another default qdisc */
@@ -316,8 +315,10 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	 * skb->{vlan_present,vlan_tci} can only show outer VLAN.
 	 */
 	if (!(parse_eth(eth, data_end, &eth_proto, &l3_offset))) {
+		#ifdef DEBUG
 		bpf_debug("Cannot parse L2: L3off:%llu proto:0x%x\n",
 			  l3_offset, eth_proto);
+		#endif
 		return TC_ACT_OK; /* Skip */
 	}
 
@@ -346,17 +347,21 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	/* Lookup IPv4 in map_ip_hash */
 	ip_info = bpf_map_lookup_elem(&map_ip_hash, &ipv4);
 	if (!ip_info) {
+		#ifdef DEBUG
 		bpf_debug("Misconf: FAILED lookup IP:0x%x ifindex_ingress:%d prio:%x\n",
 			  ipv4, skb->ingress_ifindex, skb->priority);
+		#endif
 		// TODO: Assign to some default classid?
 		return TC_ACT_OK;
 	}
 
 	if (ip_info->cpu != cpu) {
+		#ifdef DEBUG
 		bpf_debug("Mismatch: Curr-CPU:%u but IP:%x wants CPU:%u\n",
 			  cpu, ipv4, ip_info->cpu);
 		bpf_debug("Mismatch: more-info ifindex:%d ingress:%d skb->prio:%x\n",
 			  skb->ifindex, skb->ingress_ifindex, skb->priority);
+		#endif
 	}
 
 	/* Catch if TC handle major number mismatch, between CPU
@@ -367,8 +372,10 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	if (txq_cfg->htb_major != ip_info_major)
 	{
 		// TODO: Could fixup MAJOR number
+		#ifdef DEBUG
 		bpf_debug("Misconf: TC major(%d) mismatch %x\n",
 			  txq_cfg->htb_major, ip_info->tc_handle);
+		#endif
 	}
 
 	/* Setup skb->priority (TC-handle) based on ip_info */

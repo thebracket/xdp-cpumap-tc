@@ -12,7 +12,6 @@
 
 */
 
-#define DEBUG 1
 #ifdef  DEBUG
 /* Only use this for debug output. Notice output from bpf_trace_printk()
  * end-up in /sys/kernel/debug/tracing/trace_pipe
@@ -23,8 +22,6 @@
                         bpf_trace_printk(____fmt, sizeof(____fmt),      \
                                      ##__VA_ARGS__);                    \
                 })
-#else
-#define bpf_debug(fmt, ...) { } while (0)
 #endif
 
 /* Wrap the macros from <linux/pkt_sched.h> */
@@ -77,10 +74,12 @@ int  tc_cls_prog(struct __sk_buff *skb)
 
 */
 	/* The __u32 TC "handle" is stored in skb->priority */
+	#ifdef DEBUG
 	bpf_debug("queue_mapping:%u major:%u minor:%u\n",
 		  skb->queue_mapping,
 		  TC_H_MAJOR(skb->priority) >> 16,
 		  TC_H_MINOR(skb->priority));
+	#endif
 	/*Changing the handle class from iptables
 	 * iptables -t mangle -A FORWARD -j CLASSIFY --set-class 0001:0004
 	 */
@@ -102,8 +101,10 @@ int  tc_cls_prog_test(struct __sk_buff *skb)
 	/* Kernel should not allow this to take effect */
 	skb->queue_mapping = NO_QUEUE_MAPPING;
 	barrier(); /* Don't let compiler trick us */
+	#ifdef DEBUG
 	bpf_debug("Tried to change queue_mapping=NO_QUEUE_MAPPING now=%d\n",
 		  skb->queue_mapping);
+	#endif
 	return TC_ACT_OK;
 }
 

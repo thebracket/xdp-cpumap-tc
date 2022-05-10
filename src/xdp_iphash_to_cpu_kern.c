@@ -15,8 +15,6 @@
 
 #include "common_kern_user.h"
 
-#define DEBUG
-
 struct vlan_hdr {
 	__be16 h_vlan_TCI;
 	__be16 h_vlan_encapsulated_proto;
@@ -71,8 +69,6 @@ struct bpf_map_def SEC("maps") cpus_available = {
                         bpf_trace_printk(____fmt, sizeof(____fmt),      \
                                      ##__VA_ARGS__);                    \
                 })
-#else
-#define bpf_debug(fmt, ...) { } while (0)
 #endif
 
 /* Parse Ethernet layer 2, extract network layer 3 offset and protocol
@@ -141,7 +137,9 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 
 	/* Hint: +1 is sizeof(struct iphdr) */
 	if (iph + 1 > data_end) {
+		#ifdef DEBUG
 		bpf_debug("Invalid IPv4 packet: L3off:%llu\n", l3_offset);
+		#endif
 		return XDP_PASS;
 	}
 	/* WAN or LAN interface? */
@@ -155,7 +153,9 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 	} else if (direction == INTERFACE_LAN) {
 		ip = iph->saddr;
 	} else {
+		#ifdef DEBUG
 		bpf_debug("Cant determin ifindex(%u) direction\n", ifindex);
+		#endif
 		return XDP_PASS;
 	}
 
@@ -170,7 +170,9 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 		ip = bpf_ntohl(0xFFFFFFFF);
 		ip_info = bpf_map_lookup_elem(&map_ip_hash, &ip);
 		if (!ip_info) {
+			#ifdef DEBUG
 			bpf_debug("cant find default cpu_idx_lookup\n");
+			#endif
 			return XDP_PASS;
 		}
 	}
@@ -182,13 +184,17 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 	 */
         cpu_lookup = bpf_map_lookup_elem(&cpus_available, &cpu_id);
 	if (!cpu_lookup) {
+		#ifdef DEBUG
 		bpf_debug("cant find cpu_lookup\n");
+		#endif
 		return XDP_PASS;
 	}
 	cpu_dest = *cpu_lookup;
 	if (cpu_dest >= MAX_CPUS) {
 		/* _user side set/marked non-configured CPUs with MAX_CPUS */
+		#ifdef DEBUG
 		bpf_debug("cpu_dest too high %i\n",cpu_dest);
+		#endif
 		return XDP_PASS;
 	}
 
@@ -230,8 +236,10 @@ int  xdp_program(struct xdp_md *ctx)
 	__u32 action;
 
 	if (!(parse_eth(eth, data_end, &eth_proto, &l3_offset))) {
+		#ifdef DEBUG
 		bpf_debug("Cannot parse L2: L3off:%llu proto:0x%x\n",
 			  l3_offset, eth_proto);
+		#endif
 		return XDP_PASS; /* Skip */
 	}
 
