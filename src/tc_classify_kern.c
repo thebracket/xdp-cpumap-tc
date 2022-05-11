@@ -52,6 +52,7 @@ struct bpf_elf_map SEC("maps") map_ip_hash = {
 	.size_value = sizeof(struct ip_hash_info),
 	.max_elem   = IP_HASH_ENTRIES_MAX,
 	.pinning    = PIN_GLOBAL_NS, /* /sys/fs/bpf/tc/globals/map_ip_hash */
+	.flags		= BPF_F_NO_PREALLOC,
 };
 
 /* More dynamic: let create a map that contains the mapping table, to

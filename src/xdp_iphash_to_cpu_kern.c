@@ -26,7 +26,7 @@ struct bpf_map_def SEC("maps") map_ip_hash = {
 	.key_size    = sizeof(struct key_ipv4),
 	.value_size  = sizeof(struct ip_hash_info),
 	.max_entries = IP_HASH_ENTRIES_MAX,
-//	.map_flags   = BPF_F_NO_PREALLOC,
+	.map_flags   = BPF_F_NO_PREALLOC,
 };
 
 /* Pinned shared map: see  mapfile_txq_config */

@@ -24,7 +24,8 @@ struct txq_config {
 	__u16 htb_major;
 };
 
-#define IP_HASH_ENTRIES_MAX	32767
+//#define IP_HASH_ENTRIES_MAX	32767
+#define IP_HASH_ENTRIES_MAX	1024
 /* Data structure used for map_ip_hash */
 struct ip_hash_info {
 	/* lookup key: __u32 IPv4-address */
