@@ -45,12 +45,6 @@ struct bpf_elf_map {
 	__u32 inner_idx;
 };
 
-/* Key type representing an IPv4 CIDR */
-struct key_ipv4 {
-	__u32 prefixlen;
-	__u32 address;
-};
-
 /* Map shared with XDP programs */
 struct bpf_elf_map SEC("maps") map_ip_hash = {
 	.type       = BPF_MAP_TYPE_LPM_TRIE,

@@ -32,4 +32,10 @@ struct ip_hash_info {
 	__u32 tc_handle; /* TC handle MAJOR:MINOR combined in __u32 */
 };
 
+/* Key type representing an IPv4 CIDR */
+struct key_ipv4 {
+	__u32 prefixlen;
+	__u32 address;
+};
+
 #endif /* __COMMON_KERN_USER_H */

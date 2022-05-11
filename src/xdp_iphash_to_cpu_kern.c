@@ -20,19 +20,13 @@ struct vlan_hdr {
 	__be16 h_vlan_encapsulated_proto;
 };
 
-/* Key type representing an IPv4 CIDR */
-struct key_ipv4 {
-	__u32 prefixlen;
-	__u32 address;
-};
-
 /* Pinned shared map: see  mapfile_ip_hash */
 struct bpf_map_def SEC("maps") map_ip_hash = {
 	.type        = BPF_MAP_TYPE_LPM_TRIE,
 	.key_size    = sizeof(struct key_ipv4),
 	.value_size  = sizeof(struct ip_hash_info),
 	.max_entries = IP_HASH_ENTRIES_MAX,
-	.map_flags   = BPF_F_NO_PREALLOC
+//	.map_flags   = BPF_F_NO_PREALLOC,
 };
 
 /* Pinned shared map: see  mapfile_txq_config */

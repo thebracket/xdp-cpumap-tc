@@ -59,10 +59,4 @@ int tc_egress_attach_bpf(const char* dev, const char* bpf_obj,
 int tc_list_egress_filter(const char* dev);
 int tc_remove_egress_filter(const char* dev);;
 
-/* Key type representing an IPv4 CIDR */
-struct key_ipv4 {
-	__u32 prefixlen;
-	__u32 address;
-};
-
 #endif /* __COMMON_USER_H */

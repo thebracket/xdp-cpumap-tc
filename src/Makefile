@@ -25,7 +25,7 @@ OBJECT_LIBBPF = $(LIBBPF_DIR)/libbpf.a $(LIBBPF_INSTDIR)
 
 CFLAGS += -I$(LIBBPF_INC)
 CFLAGS += -I../headers/
-CFLAGS += -Os
+#CFLAGS += -Os
 LDFLAGS ?= -L$(LIBBPF_DIR)
 
 COMMON_USER_OBJ := common_user.o
