@@ -45,13 +45,19 @@ struct bpf_elf_map {
 	__u32 inner_idx;
 };
 
+/* Key type representing an IPv4 CIDR */
+struct key_ipv4 {
+	__u32 prefixlen;
+	__u32 address;
+};
+
 /* Map shared with XDP programs */
 struct bpf_elf_map SEC("maps") map_ip_hash = {
-	.type       = BPF_MAP_TYPE_HASH,
-	.size_key   = sizeof(__u32),
+	.type       = BPF_MAP_TYPE_LPM_TRIE,
+	.size_key   = sizeof(struct key_ipv4),
 	.size_value = sizeof(struct ip_hash_info),
 	.max_elem   = IP_HASH_ENTRIES_MAX,
-        .pinning    = PIN_GLOBAL_NS, /* /sys/fs/bpf/tc/globals/map_ip_hash */
+	.pinning    = PIN_GLOBAL_NS, /* /sys/fs/bpf/tc/globals/map_ip_hash */
 };
 
 /* More dynamic: let create a map that contains the mapping table, to
@@ -284,7 +290,10 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	struct ethhdr *eth = data;
 	__u16 eth_proto = 0;
 	__u32 l3_offset = 0;
-	__u32 ipv4 = bpf_ntohl(0xFFFFFFFF); /* default not found */
+	//__u32 ipv4 = bpf_ntohl(0xFFFFFFFF); /* default not found */
+	struct key_ipv4 ipv4_key;
+	ipv4_key.prefixlen = 32;
+	ipv4_key.address = bpf_ntohl(0xFFFFFFFF); /* default not found */
 
 	txq_cfg = bpf_map_lookup_elem(&map_txq_config, &cpu);
         if (!txq_cfg)
@@ -331,8 +340,8 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	/* Get IP addr to match against */
 	switch (eth_proto) {
 	case ETH_P_IP:
-		ipv4 = get_ipv4_addr(skb, l3_offset, *ifindex_type);
-		if (!ipv4)
+		ipv4_key.address = get_ipv4_addr(skb, l3_offset, *ifindex_type);
+		if (!ipv4_key.address)
 			return TC_ACT_OK;
 		break;
 	case ETH_P_IPV6: /* No handler for IPv6 yet */
@@ -345,7 +354,7 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	}
 
 	/* Lookup IPv4 in map_ip_hash */
-	ip_info = bpf_map_lookup_elem(&map_ip_hash, &ipv4);
+	ip_info = bpf_map_lookup_elem(&map_ip_hash, &ipv4_key);
 	if (!ip_info) {
 		#ifdef DEBUG
 		bpf_debug("Misconf: FAILED lookup IP:0x%x ifindex_ingress:%d prio:%x\n",

@@ -124,10 +124,11 @@ static void iphash_list_all_ipv4(int fd)
 static void iphash_clear_all_ipv4(int fd)
 {
 	char ip_txt[INET_ADDRSTRLEN] = {0};
-	__u32 key, *prev_key = NULL;
+	//__u32 key, *prev_key = NULL;
+	struct key_ipv4 key, *prev_key = NULL;
 
 	while (bpf_map_get_next_key(fd, prev_key, &key) == 0) {
-                inet_ntop(AF_INET, &key, ip_txt, sizeof(ip_txt));
+                inet_ntop(AF_INET, &key.address, ip_txt, sizeof(ip_txt));
 		iphash_modify(fd, ip_txt, ACTION_DEL, 0, 0, -1);
 		prev_key = &key;
 	}

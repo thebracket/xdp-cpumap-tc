@@ -20,12 +20,19 @@ struct vlan_hdr {
 	__be16 h_vlan_encapsulated_proto;
 };
 
+/* Key type representing an IPv4 CIDR */
+struct key_ipv4 {
+	__u32 prefixlen;
+	__u32 address;
+};
+
 /* Pinned shared map: see  mapfile_ip_hash */
 struct bpf_map_def SEC("maps") map_ip_hash = {
-	.type        = BPF_MAP_TYPE_HASH,
-	.key_size    = sizeof(__u32),
+	.type        = BPF_MAP_TYPE_LPM_TRIE,
+	.key_size    = sizeof(struct key_ipv4),
 	.value_size  = sizeof(struct ip_hash_info),
 	.max_entries = IP_HASH_ENTRIES_MAX,
+	.map_flags   = BPF_F_NO_PREALLOC
 };
 
 /* Pinned shared map: see  mapfile_txq_config */
@@ -128,7 +135,9 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 	struct iphdr *iph = data + l3_offset;
 	__u32 *direction_lookup;
 	__u32 direction;
-	__u32 ip; /* type need to match map */
+	//__u32 ip; /* type need to match map */
+	struct key_ipv4 ip_key;
+	ip_key.prefixlen = 32;
 	struct ip_hash_info *ip_info;
 	//u32 *cpu_id_lookup;
 	__u32 cpu_id;
@@ -149,9 +158,9 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 	direction = *direction_lookup;
 	/* Extract key, XDP operate at "ingress" */
 	if (direction == INTERFACE_WAN) {
-		ip = iph->daddr;
+		ip_key.address = iph->daddr;
 	} else if (direction == INTERFACE_LAN) {
-		ip = iph->saddr;
+		ip_key.address = iph->saddr;
 	} else {
 		#ifdef DEBUG
 		bpf_debug("Cant determin ifindex(%u) direction\n", ifindex);
@@ -159,7 +168,7 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 		return XDP_PASS;
 	}
 
-	ip_info = bpf_map_lookup_elem(&map_ip_hash, &ip);
+	ip_info = bpf_map_lookup_elem(&map_ip_hash, &ip_key);
 	if (!ip_info) {
 		/* On LAN side (XDP-ingress) some uncategorized traffic are
 		 * expected, e.g. services like DHCP are running and IPs
@@ -167,8 +176,9 @@ __u32 parse_ipv4(struct xdp_md *ctx, __u32 l3_offset, __u32 ifindex)
 		 */
 		// bpf_debug("cant find ip_info->cpu id for ip:%u\n", ip);
 		// 255.255.255.255 is for default traffic
-		ip = bpf_ntohl(0xFFFFFFFF);
-		ip_info = bpf_map_lookup_elem(&map_ip_hash, &ip);
+		ip_key.address = bpf_ntohl(0xFFFFFFFF);
+		ip_key.prefixlen = 32;
+		ip_info = bpf_map_lookup_elem(&map_ip_hash, &ip_key);
 		if (!ip_info) {
 			#ifdef DEBUG
 			bpf_debug("cant find default cpu_idx_lookup\n");

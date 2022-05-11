@@ -82,7 +82,8 @@ int iphash_modify(int fd, char *ip_string, unsigned int action,
 		  __u32 cpu_idx, __u32 tc_handle, int txq_map_fd)
 {
 	//printf ("In iphash_modify %u\n",cpu_idx);
-	__u32 key;
+	//__u32 key; // This was the previous key structure
+	struct key_ipv4 key;
 	int res;
 	unsigned int nr_cpus = bpf_num_possible_cpus();
 	struct ip_hash_info ip_info;
@@ -95,7 +96,7 @@ int iphash_modify(int fd, char *ip_string, unsigned int action,
 	ip_info.tc_handle = tc_handle;
 
 	/* Convert IP-string into 32-bit network byte-order value */
-	res = inet_pton(AF_INET, ip_string, &key);
+	res = inet_pton(AF_INET, ip_string, &key.address);
 	if (res <= 0) {
 		if (res == 0)
 			fprintf(stderr,
@@ -105,7 +106,8 @@ int iphash_modify(int fd, char *ip_string, unsigned int action,
 			perror("inet_pton");
 		return EXIT_FAIL_IP;
 	}
-	printf ("key: 0x%X\n", key);
+	key.prefixlen = 32; // 32-bit IP address, no masks yet
+	printf ("key: 0x%X\n", key.address);
 	if (action == ACTION_ADD) {
 		//res = bpf_map_update_elem(fd, &key, &ip_info, BPF_NOEXIST);
 		if (!map_txq_config_check_ip_info(txq_map_fd, &ip_info))
@@ -122,7 +124,7 @@ int iphash_modify(int fd, char *ip_string, unsigned int action,
 	if (res != 0) { /* 0 == success */
 		fprintf(stderr,
 			"%s() IP:%s key:0x%X errno(%d/%s)",
-			__func__, ip_string, key, errno, strerror(errno));
+			__func__, ip_string, key.address, errno, strerror(errno));
 
 		if (errno == 17) {
 			fprintf(stderr, ": Already in Iphash\n");
@@ -133,8 +135,8 @@ int iphash_modify(int fd, char *ip_string, unsigned int action,
 	}
 	if (verbose)
 		fprintf(stderr,
-			"%s() IP:%s key:0x%X TC-handle:0x%X\n",
-			__func__, ip_string, key, tc_handle);
+			"%s() IP:%s key:0x%X prefix bits:%d TC-handle:0x%X\n",
+			__func__, ip_string, key.address, key.prefixlen, tc_handle);
 	return EXIT_OK;
 }
 
