@@ -45,6 +45,7 @@ clean:
 	rm -f $(COMMON_USER_OBJ)
 	rm -f *.ll
 	rm -f *~
+	rm -f xdp_iphash_to_cpu_cmdline
 
 llvm-check: $(CLANG) $(LLC)
 	@for TOOL in $^ ; do \
