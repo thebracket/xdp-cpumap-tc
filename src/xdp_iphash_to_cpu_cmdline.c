@@ -39,6 +39,7 @@ static const struct option long_options[] = {
         {"ip",          required_argument,      NULL, 'i' },
         {"classid",     required_argument,      NULL, 't' },
         {"cpu",         required_argument,      NULL, 'c' },
+		{"prefix",		required_argument,		NULL, 'p' },
         {"list",        no_argument,            NULL, 'l' },
         {"clear",       no_argument,            NULL, 'e' },
         {0, 0, NULL,  0 }
@@ -129,7 +130,7 @@ static void iphash_clear_all_ipv4(int fd)
 
 	while (bpf_map_get_next_key(fd, prev_key, &key) == 0) {
                 inet_ntop(AF_INET, &key.address, ip_txt, sizeof(ip_txt));
-		iphash_modify(fd, ip_txt, ACTION_DEL, 0, 0, -1);
+		iphash_modify(fd, ip_txt, ACTION_DEL, 0, 0, -1, key.prefixlen);
 		prev_key = &key;
 	}
 }
@@ -188,6 +189,7 @@ int main(int argc, char **argv) {
 	#	define STR_MAX 42 /* For trivial input validation */
 	char _ip_string_buf[STR_MAX] = {};
 	char *ip_string = NULL;
+	__u32 prefix = 32;
 	unsigned int action = 0;
 	int longindex = 0;
 	bool do_list = false;
@@ -209,6 +211,9 @@ int main(int argc, char **argv) {
 			break;
 		case 'c':
 			cpu = strtoul(optarg, NULL, 0);
+			break;
+		case 'p':
+			prefix = strtoul(optarg, NULL, 0);
 			break;
 		case 'i':
 			if (!optarg || strlen(optarg) >= STR_MAX) {
@@ -285,7 +290,7 @@ int main(int argc, char **argv) {
 			int txq_fd = open_bpf_map(mapfile_txq_config);
 			fd = open_bpf_map(mapfile_ip_hash);
 			res = iphash_modify(fd, ip_string, action, cpu,
-					    tc_handle, txq_fd);
+					    tc_handle, txq_fd, prefix);
 			close(fd);
 			close(txq_fd);
 		}

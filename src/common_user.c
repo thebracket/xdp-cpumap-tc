@@ -79,7 +79,7 @@ bool map_txq_config_check_ip_info(int map_fd, struct ip_hash_info *ip_info) {
 }
 
 int iphash_modify(int fd, char *ip_string, unsigned int action,
-		  __u32 cpu_idx, __u32 tc_handle, int txq_map_fd)
+		  __u32 cpu_idx, __u32 tc_handle, int txq_map_fd, __u32 prefix)
 {
 	//printf ("In iphash_modify %u\n",cpu_idx);
 	//__u32 key; // This was the previous key structure
@@ -106,7 +106,7 @@ int iphash_modify(int fd, char *ip_string, unsigned int action,
 			perror("inet_pton");
 		return EXIT_FAIL_IP;
 	}
-	key.prefixlen = 32; // 32-bit IP address, no masks yet
+	key.prefixlen = prefix;
 	printf ("key: 0x%X\n", key.address);
 	if (action == ACTION_ADD) {
 		//res = bpf_map_update_elem(fd, &key, &ip_info, BPF_NOEXIST);
