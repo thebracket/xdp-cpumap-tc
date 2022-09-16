@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+#define DEBUG 1
 #include <linux/bpf.h>
 #include <linux/pkt_cls.h>
 #include <linux/pkt_sched.h> /* TC_H_MAJ + TC_H_MIN */
@@ -272,6 +273,7 @@ bool special_minor_classid(struct __sk_buff *skb,
 SEC("tc_classify")
 int  tc_cls_prog(struct __sk_buff *skb)
 {
+	//bpf_debug("Start");
 	__u32 cpu = bpf_get_smp_processor_id();
 	struct ip_hash_info *ip_info;
 	struct txq_config *txq_cfg;
@@ -353,7 +355,7 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	if (!ip_info) {
 		#ifdef DEBUG
 		bpf_debug("Misconf: FAILED lookup IP:0x%x ifindex_ingress:%d prio:%x\n",
-			  ipv4, skb->ingress_ifindex, skb->priority);
+			  ipv4_key, skb->ingress_ifindex, skb->priority);
 		#endif
 		// TODO: Assign to some default classid?
 		return TC_ACT_OK;
@@ -362,7 +364,7 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	if (ip_info->cpu != cpu) {
 		#ifdef DEBUG
 		bpf_debug("Mismatch: Curr-CPU:%u but IP:%x wants CPU:%u\n",
-			  cpu, ipv4, ip_info->cpu);
+			  cpu, ipv4_key, ip_info->cpu);
 		bpf_debug("Mismatch: more-info ifindex:%d ingress:%d skb->prio:%x\n",
 			  skb->ifindex, skb->ingress_ifindex, skb->priority);
 		#endif

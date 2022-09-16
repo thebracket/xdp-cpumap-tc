@@ -1,0 +1,10 @@
+### May 11, 2022
+
+* Made debug mode a bit more thorough in not sending things to debug output.
+* `make clean` actually cleans all of the output binaries now.
+* Exclude some binary output from Git.
+* Exclude VIM ".swp" files from Git.
+* Add -Os to optimize for size, since BPF filters are space limited.
+* Changed IPv4 map to a Trie, and added --prefix to the command line to specify larger subnets than /32.
+* Added a testing framework (testbed.sh), to let me work on it in my VM.
+

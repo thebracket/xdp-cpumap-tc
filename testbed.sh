@@ -4,7 +4,10 @@
 # You should be able to modify it as needed.
 # Note that on my test VM, I had to update to 5.16 Linux.
 
-TEST_INTERFACE="ens160"
+TEST_INTERFACE="eth0"
+MY_IP="172.17.26.190"
+MY_NET="172.17.26.0"
+MY_PREFIX="24"
 
 # Set tuning parameters
 ethtool --offload $TEST_INTERFACE gso off tso off lro off sg off gro off
@@ -34,4 +37,18 @@ tc qdisc add dev $TEST_INTERFACE parent 1:2 cake diffserv4
 # Setup a test that should catch this computers IP in a queue
 tc class add dev $TEST_INTERFACE parent 1:1 classid 1:200 htb rate 5mbit ceil 10mbit prio 3
 tc qdisc add dev $TEST_INTERFACE parent 1:200 cake diffserv4
-src/xdp_iphash_to_cpu_cmdline --add --ip 172.16.10.216 --classid 1:200 --cpu 0 --prefix 32
+
+tc filter replace dev eth0 prio 0xC000 handle 1 egress bpf da obj src/tc_classify_kern.o sec tc_classify
+
+# Uncomment ONE of these
+# EITHER 1: Match based on a /32 prefix
+#src/xdp_iphash_to_cpu_cmdline --add --ip $MY_IP --classid 1:200 --cpu 0 --prefix 32
+# OR 2: Match based on a big prefix
+src/xdp_iphash_to_cpu_cmdline --add --ip $MY_NET --classid 1:200 --cpu 0 --prefix $MY_PREFIX
+
+# Print the IP we just added
+src/xdp_iphash_to_cpu_cmdline --list
+
+# You should now see some traffic on the interface queue
+echo "Make some network noise, and then try: sudo tc -s -d qdisc show dev eth0"
+

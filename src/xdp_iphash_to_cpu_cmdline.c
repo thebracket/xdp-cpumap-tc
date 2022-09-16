@@ -66,7 +66,7 @@ static void usage(char *argv[])
 	printf("\n");
 }
 
-static bool get_key32_value_ip_info(int fd, __u32 key, struct ip_hash_info *ip_info)
+static bool get_key32_value_ip_info(int fd, struct key_ipv4 key, struct ip_hash_info *ip_info)
 {
 	if ((bpf_map_lookup_elem(fd, &key, ip_info)) != 0) {
 		fprintf(stderr,
@@ -77,7 +77,7 @@ static bool get_key32_value_ip_info(int fd, __u32 key, struct ip_hash_info *ip_i
 	return true;
 }
 
-static void iphash_print_ipv4(__u32 ip, struct ip_hash_info *ip_info,int i)
+static void iphash_print_ipv4(struct key_ipv4 ip, struct ip_hash_info *ip_info,int i)
 {
 	char ip_txt[INET_ADDRSTRLEN] = {0};
 
@@ -87,7 +87,7 @@ static void iphash_print_ipv4(__u32 ip, struct ip_hash_info *ip_info,int i)
 	}
 
 	/* Convert IPv4 addresses from binary to text form */
-	if (!inet_ntop(AF_INET, &ip, ip_txt, sizeof(ip_txt))) {
+	if (!inet_ntop(AF_INET, &ip.address, ip_txt, sizeof(ip_txt))) {
 		fprintf(stderr,
 			"ERR: Cannot convert u32 IP:0x%X to IP-txt\n", ip);
 		exit(EXIT_FAIL_IP);
@@ -96,21 +96,26 @@ static void iphash_print_ipv4(__u32 ip, struct ip_hash_info *ip_info,int i)
 		printf(",\n");
 	__u16 ip_info_major = (TC_H_MAJOR(ip_info->tc_handle) >> 16);
 	__u16 ip_info_minor = (TC_H_MINOR(ip_info->tc_handle));
-	printf("\"%s\" : { \"cpu\" : %u, \"tc_maj\" : \"%X\" , \"tc_min\" : \"%X\" }",
-	       ip_txt, ip_info->cpu, ip_info_major, ip_info_minor);
+	printf("\"%s/%d\" : { \"cpu\" : %u, \"tc_maj\" : \"%X\" , \"tc_min\" : \"%X\" }",
+	       ip_txt, ip.prefixlen, ip_info->cpu, ip_info_major, ip_info_minor);
 }
 static void iphash_list_all_ipv4(int fd)
 {
-	__u32 key, *prev_key = NULL;
+	struct key_ipv4 key;
+	struct key_ipv4 *prev_key = NULL;
+//	__u32 key, *prev_key = NULL;
 	struct ip_hash_info ip_info;
 	int err;
 	int i = 0;
+	//printf("Got to listing the keys\n");
 	printf("{\n");
 	while ((err = bpf_map_get_next_key(fd, prev_key, &key)) == 0) {
+		//printf("BPF map get next key worked\n");
 		if (!get_key32_value_ip_info(fd, key, &ip_info)) {
 			err = -1;
 			break;
 		}
+		//printf("Got to printing a key");
 		iphash_print_ipv4(key, &ip_info, i);
 		prev_key = &key;
 		i++;
@@ -250,7 +255,9 @@ int main(int argc, char **argv) {
 	}
 
 	if (do_list) {
+		//printf("%s\n", mapfile_ip_hash);
 		fd = open_bpf_map(mapfile_ip_hash);
+		//printf("fd: %d\n", fd);
 		iphash_list_all_ipv4(fd);
 		close(fd);
 		return EXIT_OK;
