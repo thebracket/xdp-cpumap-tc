@@ -1,3 +1,9 @@
+### September 17, 2022
+
+* Add and List are working for the command line tool.
+* Matching appears to work.
+* Made a mess with extra debug code that needs cleaning.
+
 ### May 11, 2022
 
 * Made debug mode a bit more thorough in not sending things to debug output.
