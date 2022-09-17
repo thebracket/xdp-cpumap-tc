@@ -41,6 +41,8 @@ tc qdisc add dev $TEST_INTERFACE parent 1:200 cake diffserv4
 tc filter replace dev eth0 prio 0xC000 handle 1 egress bpf da obj src/tc_classify_kern.o sec tc_classify
 
 # Testing the "clear" function
+echo "TESTING CLEAR"
+echo "-------------"
 src/xdp_iphash_to_cpu_cmdline --add --ip 192.168.1.1 --classid 1:200 --cpu 0 --prefix 32
 src/xdp_iphash_to_cpu_cmdline --add --ip 192.168.1.2 --classid 1:200 --cpu 0 --prefix 32
 src/xdp_iphash_to_cpu_cmdline --add --ip 192.168.1.3 --classid 1:200 --cpu 0 --prefix 32
@@ -48,6 +50,16 @@ src/xdp_iphash_to_cpu_cmdline --list
 src/xdp_iphash_to_cpu_cmdline --clear
 src/xdp_iphash_to_cpu_cmdline --list
 
+# Test the "delete" function
+echo "TESTING DELETE"
+echo "--------------"
+src/xdp_iphash_to_cpu_cmdline --add --ip 192.168.1.1 --classid 1:200 --cpu 0 --prefix 32
+src/xdp_iphash_to_cpu_cmdline --list
+src/xdp_iphash_to_cpu_cmdline --del --ip 192.168.1.1 --classid 1:200 --cpu 0 --prefix 32
+src/xdp_iphash_to_cpu_cmdline --list
+
+echo "TESTING MATCHING"
+echo "----------------"
 # Uncomment ONE of these
 # EITHER 1: Match based on a /32 prefix
 #src/xdp_iphash_to_cpu_cmdline --add --ip $MY_IP --classid 1:200 --cpu 0 --prefix 32

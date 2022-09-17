@@ -3,6 +3,7 @@
 * Added a test to add 3 IPs and call "clear" to the list.
    * Noticed that the "clear" function only removes 2 of the 3.
 * Added an ugly hack to make "clear" work; there's almost certainly a better way, added a TODO.
+* Added a test to add an IP and delete it.
 
 ### September 17, 2022
 
