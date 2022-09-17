@@ -138,6 +138,15 @@ static void iphash_clear_all_ipv4(int fd)
 		iphash_modify(fd, ip_txt, ACTION_DEL, 0, 0, -1, key.prefixlen);
 		prev_key = &key;
 	}
+	// Bug alert: this didn't remove the last element!
+	// As a work-around, we'll do it again.
+	// TODO: This is a really ugly way to handle the problem!
+	prev_key = NULL;
+	while (bpf_map_get_next_key(fd, prev_key, &key) == 0) {
+                inet_ntop(AF_INET, &key.address, ip_txt, sizeof(ip_txt));
+                iphash_modify(fd, ip_txt, ACTION_DEL, 0, 0, -1, key.prefixlen);
+                prev_key = &key;
+        }
 }
 int open_bpf_map(const char *file)
 {
