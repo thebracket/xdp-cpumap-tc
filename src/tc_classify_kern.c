@@ -1,5 +1,4 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#define DEBUG 1
 #include <linux/bpf.h>
 #include <linux/pkt_cls.h>
 #include <linux/pkt_sched.h> /* TC_H_MAJ + TC_H_MIN */
@@ -183,17 +182,22 @@ __u32 get_ipv4_addr(struct __sk_buff *skb, __u32 l3_offset, __u32 ifindex_type)
 	/* The IP-addr to match against depend on the "direction" of
 	 * the packet.  This TC hook runs at egress.
 	 */
+	// Note that we switched the order here; it started working???
 	switch (ifindex_type) {
 	case INTERFACE_WAN: /* Egress on WAN interface: match on src IP */
-		ipv4 = iph->saddr;
+		//bpf_debug("WAN - Source");
+		//ipv4 = iph->saddr;
+		ipv4 = iph->daddr;
 		break;
 	case INTERFACE_LAN: /* Egress on LAN interface: match on dst IP */
-		ipv4 = iph->daddr;
+		//bpf_debug("LAN - Dest");
+		//ipv4 = iph->daddr;
+		ipv4 = iph->saddr;
 		break;
 	default:
 		ipv4 = 0;
 	}
-
+	//bpf_debug("0x%x", ipv4);
 	return ipv4;
 }
 
@@ -274,6 +278,7 @@ SEC("tc_classify")
 int  tc_cls_prog(struct __sk_buff *skb)
 {
 	//bpf_debug("Start");
+
 	__u32 cpu = bpf_get_smp_processor_id();
 	struct ip_hash_info *ip_info;
 	struct txq_config *txq_cfg;
@@ -351,15 +356,18 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	}
 
 	/* Lookup IPv4 in map_ip_hash */
+
 	ip_info = bpf_map_lookup_elem(&map_ip_hash, &ipv4_key);
+	//bpf_debug("ip_info = %d", ip_info);
 	if (!ip_info) {
 		#ifdef DEBUG
 		bpf_debug("Misconf: FAILED lookup IP:0x%x ifindex_ingress:%d prio:%x\n",
-			  ipv4_key, skb->ingress_ifindex, skb->priority);
+			  ipv4_key.address, skb->ingress_ifindex, skb->priority);
 		#endif
 		// TODO: Assign to some default classid?
 		return TC_ACT_OK;
 	}
+	//bpf_debug("Found IP!");
 
 	if (ip_info->cpu != cpu) {
 		#ifdef DEBUG
@@ -392,6 +400,7 @@ int  tc_cls_prog(struct __sk_buff *skb)
 	//	  ipv4, skb->priority, ip_info->tc_handle);
 
 	//return TC_ACT_OK;
+	//bpf_debug("Action applied");
 	return action;
 }
 
